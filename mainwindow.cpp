@@ -5,6 +5,29 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+
+    initDataBase();
+
+    AuthDialog * dia = new AuthDialog(this);
+    dia->exec();
+
+    login = dia->getUserName();
+    password = dia->getUserPassword();
+
+    QSqlQuery query;
+
+    if(dia->getNeedCheckIn())
+    {        
+        CheckInDialog * checkInDialog = new CheckInDialog(this);
+        checkInDialog->exec();
+        QString fio = checkInDialog->getFIO();
+        QString phoneNumber = checkInDialog->getPhoneNumber();
+        int indexPostalOffice = checkInDialog->getIndexPostalOffice();
+
+        query.exec(QString("call create_new_client('%1', '%2', '%3', '%4', '%5')")
+                   .arg(fio, phoneNumber, QString::number(indexPostalOffice), login, password));
+    }
+
     ui->setupUi(this);
 
 
@@ -31,72 +54,32 @@ MainWindow::MainWindow(QWidget *parent) :
 
     centralWidget()->setLayout(ui->gridLayout);
 
+    query.exec(QString("call get_client_postals_waiting('%1')")
+               .arg(login));
+
+    modelWaitPostal->setQuery(query);
+    tab1->setModel(modelWaitPostal);
+
 }
-
-
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-\
 
-void MainWindow::on_exitAkkButton_clicked()
+void MainWindow::initDataBase()
 {
-    if(ui->exitAkkButton->text() == "Войти")
-    {
-        QDialog * dialogAuth = new QDialog();
+    db.setHostName("localhost");
+    db.setUserName("root");
+    db.setPassword("taya");
+    db.setDatabaseName("mail");
 
-        QVBoxLayout *dialogAuthLayout = new QVBoxLayout;
+    db.open();
+}
 
-        QLabel * labelLogin = new QLabel("Логин :");
-        QLineEdit * editLogin = new QLineEdit;
-        QLabel * labelPassword = new QLabel("Пароль :");
-        QLineEdit * editPassword = new QLineEdit;
+void MainWindow::on_createButton_clicked()
+{
+    createPostDialog * postDialog = new createPostDialog(login);
 
-        QDialogButtonBox *btn_box = new QDialogButtonBox(dialogAuth);
-        btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-
-        connect(btn_box, &QDialogButtonBox::accepted, dialogAuth, &QDialog::accept);
-        connect(btn_box, &QDialogButtonBox::rejected, dialogAuth, &QDialog::reject);
-
-        dialogAuth->setWindowFlags(Qt::CustomizeWindowHint);
-        dialogAuth->setWindowTitle("Вход");
-        dialogAuth->setGeometry(690,360,540,360);
-
-        dialogAuthLayout->addWidget(labelLogin);
-        dialogAuthLayout->addWidget(editLogin);
-        dialogAuthLayout->addWidget(labelPassword);
-        dialogAuthLayout->addWidget(editPassword);
-        dialogAuthLayout->addWidget(btn_box);
-
-        dialogAuth->setLayout(dialogAuthLayout);
-
-        QFile file("/home/ya/mailClient/dialogAuth.css");
-        file.open(QIODevice::ReadOnly);
-
-        QString cssDialog = file.readAll();
-
-        qDebug()  << cssDialog;
-
-        file.close();
-
-        dialogAuth->setStyleSheet(cssDialog);
-
-        if(dialogAuth->exec() == QDialog::Accepted)
-        {
-           login = editLogin->text();
-           password = editPassword->text();
-           if(login != "" && password != "")
-           {
-              ui->exitAkkButton->setText("Выйти");
-           }
-        }
-    }
-    else
-    {
-        login = "";
-        password = "";
-        ui->exitAkkButton->setText("Войти");
-    }
+    postDialog->exec();
 }

@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
+QT       += core sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,13 +26,22 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+    authdialog.cpp \
+    checkindialog.cpp \
+    createpostdialog.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+    authdialog.h \
+    checkindialog.h \
+    createpostdialog.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    authdialog.ui \
+    checkindialog.ui \
+    createpostdialog.ui
 
 DISTFILES += \
     dialogAuth.css
