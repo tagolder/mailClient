@@ -1,8 +1,8 @@
 #include "checkindialog.h"
 #include "ui_checkindialog.h"
 
-CheckInDialog::CheckInDialog(QWidget *parent) :
-    QDialog(parent),
+CheckInDialog::CheckInDialog(QString login_p, QString password_p, QWidget *parent) :
+    QDialog(parent),login(login_p), password(password_p),
     ui(new Ui::CheckInDialog)
 {
     ui->setupUi(this);
@@ -28,27 +28,18 @@ CheckInDialog::~CheckInDialog()
 
 void CheckInDialog::on_checkInButton_clicked()
 {
-    fio = ui->phoneNumberEdit->text();
-    phoneNumber = ui->fioEdit->text();
+    phoneNumber = ui->phoneNumberEdit->text();
+    fio = ui->fioEdit->text();
     indexPostalOffice = ui->postalIndexComboBox->currentIndex() + 1;
 
     if(fio != "" && phoneNumber != "" && indexPostalOffice != 0)
     {
+        qDebug() << fio << phoneNumber << QString::number(indexPostalOffice) << login << password;
+        QSqlQuery query;
+        query.exec(QString("call create_new_client('%1', '%2', '%3', '%4', '%5')")
+                   .arg(fio, phoneNumber, QString::number(indexPostalOffice), login, password));
         this->close();
     }
 }
 
-QString CheckInDialog::getFIO()
-{
-    return fio;
-}
 
-QString CheckInDialog::getPhoneNumber()
-{
-    return phoneNumber;
-}
-
-int CheckInDialog::getIndexPostalOffice()
-{
-    return indexPostalOffice;
-}

@@ -16,12 +16,8 @@ class CheckInDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit CheckInDialog(QWidget *parent = 0);
+    explicit CheckInDialog(QString login, QString password,QWidget *parent = 0);
     ~CheckInDialog();
-
-    QString getFIO();
-    QString getPhoneNumber();
-    int getIndexPostalOffice();
 
 private slots:
 
@@ -32,6 +28,8 @@ private:
     QString fio = "";
     QString phoneNumber = "";
     int indexPostalOffice = 0;
+    QString login = "";
+    QString password = "";
 };
 
 #endif // CHECKINDIALOG_H

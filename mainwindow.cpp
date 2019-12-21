@@ -14,52 +14,58 @@ MainWindow::MainWindow(QWidget *parent) :
     login = dia->getUserName();
     password = dia->getUserPassword();
 
-    QSqlQuery query;
-
     if(dia->getNeedCheckIn())
     {        
-        CheckInDialog * checkInDialog = new CheckInDialog(this);
+        CheckInDialog * checkInDialog = new CheckInDialog(login, password, this);
         checkInDialog->exec();
-        QString fio = checkInDialog->getFIO();
-        QString phoneNumber = checkInDialog->getPhoneNumber();
-        int indexPostalOffice = checkInDialog->getIndexPostalOffice();
-
-        query.exec(QString("call create_new_client('%1', '%2', '%3', '%4', '%5')")
-                   .arg(fio, phoneNumber, QString::number(indexPostalOffice), login, password));
     }
 
     ui->setupUi(this);
 
-
-    QTabWidget * postalItems = new QTabWidget;
-
-    QTableView * tab1 = new QTableView;
     postalItems->addTab(tab1, "Созданные");
 
-    QTableView * tab2 = new QTableView;
     postalItems->addTab(tab2, "Отправленные мной");
 
-    QTableView * tab3 = new QTableView;
     postalItems->addTab(tab3, "Отправленные мне");
 
-    QTableView * tab4 = new QTableView;
-    postalItems->addTab(tab4, "Пришедшие");
-
-    QTableView * tab5 = new QTableView;
-    postalItems->addTab(tab5, "Полученные");
-
     postalItems->setUsesScrollButtons(false);
+
+
+    connect(postalItems, SIGNAL(currentChanged(int)), this, SLOT(clickTabWidget(int)));
+
 
     ui->verticalLayout->addWidget(postalItems);
 
     centralWidget()->setLayout(ui->gridLayout);
 
-    query.exec(QString("call get_client_postals_waiting('%1')")
+    QSqlQuery queryWaitPostal;
+    QSqlQuery querySandToPostal;
+    QSqlQuery querySandFromPostal;
+
+    queryWaitPostal.exec(QString("call get_client_postals_waiting('%1')")
                .arg(login));
-
-    modelWaitPostal->setQuery(query);
+    modelWaitPostal->setQuery(queryWaitPostal);
     tab1->setModel(modelWaitPostal);
+    tab1->resizeColumnsToContents();
+    tab1->resizeRowsToContents();
+    tab1->horizontalHeader()->setStretchLastSection(true);
 
+    querySandToPostal.exec(QString("call get_client_postals('%1')")
+                           .arg(login));
+    modelSandToPostal->setQuery(querySandToPostal);
+    tab2->setModel(modelSandToPostal);
+    tab2->resizeColumnsToContents();
+    tab2->resizeRowsToContents();
+    tab2->horizontalHeader()->setStretchLastSection(true);
+
+
+    querySandFromPostal.exec(QString("call get_to_client_postals('%1')")
+                             .arg(login));
+    modelSandFromPostal->setQuery(querySandFromPostal);
+    tab3->setModel(modelSandFromPostal);
+    tab3->resizeColumnsToContents();
+    tab3->resizeRowsToContents();
+    tab3->horizontalHeader()->setStretchLastSection(true);
 }
 
 MainWindow::~MainWindow()
@@ -80,6 +86,109 @@ void MainWindow::initDataBase()
 void MainWindow::on_createButton_clicked()
 {
     createPostDialog * postDialog = new createPostDialog(login);
-
     postDialog->exec();
+
+    QSqlQuery queryWaitPostal;
+    queryWaitPostal.exec(QString("call get_client_postals_waiting('%1')")
+               .arg(login));
+    modelWaitPostal->setQuery(queryWaitPostal);
+    tab1->setModel(modelWaitPostal);
+}
+
+void MainWindow::clickTabWidget(int index)
+{
+    qDebug() << "func, index : " << index;
+    switch (index) {
+    case 0:
+    {
+        QSqlQuery queryWaitPostal;
+        queryWaitPostal.exec(QString("call get_client_postals_waiting('%1')")
+                   .arg(login));
+        modelWaitPostal->setQuery(queryWaitPostal);
+        tab1->setModel(modelWaitPostal);
+        ui->dropButton->setEnabled(true);
+        break;
+    }
+    case 1:
+    {
+        QSqlQuery querySandToPostal;
+        querySandToPostal.exec(QString("call get_client_postals('%1')")
+                               .arg(login));
+        modelSandToPostal->setQuery(querySandToPostal);
+        tab2->setModel(modelSandToPostal);
+        ui->dropButton->setEnabled(false);
+        break;
+    }
+    case 2:
+    {
+        QSqlQuery querySandFromPostal;
+        querySandFromPostal.exec(QString("call get_to_client_postals('%1')")
+                                 .arg(login));
+        modelSandFromPostal->setQuery(querySandFromPostal);
+        tab3->setModel(modelSandFromPostal);
+        ui->dropButton->setEnabled(false);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void MainWindow::on_dropButton_clicked()
+{
+
+    QSqlQuery queryDeleteRow;
+    QString index = modelWaitPostal->index(tab1->selectionModel()->currentIndex().row(), 0).data().toString();
+
+    QMessageBox * pMes =  new QMessageBox(QMessageBox::Question, "Удалить отправление",
+                                          "Хотите удалить отправление с индексом : " + index + " ?",
+                                          QMessageBox::Yes | QMessageBox::No, this);
+
+    if(pMes->exec() == QMessageBox::Yes)
+    {
+        queryDeleteRow.exec(QString("call delete_postal_wait('%1')")
+                   .arg(index));
+
+        QSqlQuery queryWaitPostal;
+        queryWaitPostal.exec(QString("call get_client_postals_waiting('%1')")
+                   .arg(login));
+        modelWaitPostal->setQuery(queryWaitPostal);
+        tab1->setModel(modelWaitPostal);
+    }
+
+}
+
+void MainWindow::on_exitAkkButton_clicked()
+{
+    AuthDialog * dia = new AuthDialog(this);
+    dia->exec();
+
+    login = dia->getUserName();
+    password = dia->getUserPassword();
+
+    QSqlQuery queryWaitPostal;
+    QSqlQuery querySandToPostal;
+    QSqlQuery querySandFromPostal;
+
+    if(dia->getNeedCheckIn())
+    {
+        CheckInDialog * checkInDialog = new CheckInDialog(login, password, this);
+        checkInDialog->exec();
+    }
+
+    queryWaitPostal.exec(QString("call get_client_postals_waiting('%1')")
+               .arg(login));
+    modelWaitPostal->setQuery(queryWaitPostal);
+    tab1->setModel(modelWaitPostal);
+
+    querySandToPostal.exec(QString("call get_client_postals('%1')")
+                           .arg(login));
+    modelSandToPostal->setQuery(querySandToPostal);
+    tab2->setModel(modelSandToPostal);
+
+    querySandFromPostal.exec(QString("call get_to_client_postals('%1')")
+                             .arg(login));
+    modelSandFromPostal->setQuery(querySandFromPostal);
+    tab3->setModel(modelSandFromPostal);
+
 }
